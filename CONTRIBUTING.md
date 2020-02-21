@@ -1,9 +1,11 @@
 # Contributing
 
 ## License
+
+
+
 Intel Project for LLVM* technology is licensed under the terms of the
-Apache-2.0 with LLVM-exception license (
-[LICENSE.txt](https://github.com/intel/llvm/blob/intel/llvm/LICENSE.TXT))
+Apache-2.0 with LLVM-exception license ([LICENSE.txt](llvm/LICENSE.TXT))
 to ensure our ability to contribute this project to the LLVM project
 under the same license.
 
@@ -63,4 +65,36 @@ Then you just add a line to every git commit message:
 
 Use your real name (sorry, no pseudonyms or anonymous contributions.)
 
-If you set your `user.name` and `user.email` git configs, you can sign your commit automatically with `git commit -s`.
+If you set your `user.name` and `user.email` git configs, you can sign your
+commit automatically with `git commit -s`.
+
+## Contribution process
+
+### Development
+
+- Create a personal fork of the project on GitHub
+- Use **sycl** branch as baseline for your changes
+- Prepare your patch (follow
+  [LLVM coding standards](https://llvm.org/docs/CodingStandards.html))
+- Build the project and run all tests (see
+[GetStartedWithSYCLCompiler.md](sycl/doc/GetStartedWithSYCLCompiler.md))
+
+### Review and acceptance testing
+
+- Create a pull request for your changes following [Creating a pull request
+instructions](https://help.github.com/articles/creating-a-pull-request/)
+- CI will run signed-off check as soon as PR is created, see **check_pr** CI
+check for results
+- CI will run build and functional testing check as soon as PR is approved by
+Intel representative
+  - New approval is needed if PR was updated (e.g. during code review)
+- Once PR is approved and all checks pass, the pull request is ready for merge
+
+### Merge
+
+Project maintainers merge pull requests using one of the following options:
+- [Rebase and merge] The preferable choice for PRs containing a single commit
+- [Squash and merge] Used when there are multiple commits in the PR
+  - Squashing is done to make sure that the project is buildable on any commit
+- [Create a merge commit] Used for LLVM pull-down PRs to preserve hashes of the
+commits pulled from the LLVM community repository
