@@ -7,9 +7,6 @@ on:
         type: string
         required: false
         default: "default"
-  pull_request_target:
-    branches:
-    - sycl
   issue_comment:
     types:
       - created
