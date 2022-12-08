@@ -2,8 +2,6 @@ name: MYYYY SYCL Windows Test
 
 on:
   issue_comment:
-    types:
-      - created
 
 jobs:
   build:
