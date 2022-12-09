@@ -17,11 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ steps.comment-branch.outputs.head_ref }}
+          ref: cfaf81fc0f3a80d17d396e35c3475932cfb2483f #${{ steps.comment-branch.outputs.head_ref }}
       - name: Print stuff
         run: | 
           echo "Hello dudes!" 
-          core.info(`Ref is ${{ steps.comment-branch.outputs.head_ref }}`)
           core.info(`Ref is ${ steps.comment-branch.outputs.head_ref }`)
   pr-commented:
     name: PR commented
