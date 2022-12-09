@@ -6,8 +6,8 @@ on:
     # triggers on created, edited and deleted by default, you may wanna restrict it, e.g.:
     #types: [created]
 
-permissions:
-  contents: read
+permissions: read-all|write-all
+
 
 jobs:
   pr-commented222:
