@@ -10,6 +10,16 @@ permissions:
   contents: read
 
 jobs:
+  pr-commented222:
+    name: PR commented222
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.comment-branch.outputs.head_ref }}
+      - name: Print stuff
+        run: echo "Hello dudes!"
   pr-commented:
     name: PR commented
     if: github.event.issue.pull_request
