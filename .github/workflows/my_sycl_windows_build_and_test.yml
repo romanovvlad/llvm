@@ -6,7 +6,7 @@ on:
     # triggers on created, edited and deleted by default, you may wanna restrict it, e.g.:
     #types: [created]
 
-permissions: read-all|write-all
+permissions: write-all
 
 
 jobs:
