@@ -34,7 +34,7 @@ jobs:
         with:
           repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
-  deploy:
+  deploy3:
     runs-on: ubuntu-latest
     steps:
       # Checkout source code
@@ -44,6 +44,63 @@ jobs:
         run: hub pr checkout ${{ github.event.issue.number }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/deploy' }}
+    steps:
+    - name: Get PR SHA
+      id: sha
+      uses: actions/github-script@v4
+      with:
+        result-encoding: string
+        script: |
+          const { owner, repo, number } = context.issue;
+          const pr = await github.pulls.get({
+            owner,
+            repo,
+            pull_number: number,
+          });
+          return pr.data.head.sha
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ steps.sha.outputs.result }}
+    - name: React to comment
+      uses: actions/github-script@v4
+      with:
+        script: |
+          const {owner, repo} = context.issue;
+          github.reactions.createForIssueComment({
+            owner,
+            repo,
+            comment_id: context.payload.comment.id,
+            content: "rocket",
+          });
+    - name: Fail randomly
+      run: |
+        cat README.md
+        exit $((RANDOM % 2))
+    - name: Message success
+      if: ${{ success() }}
+      uses: actions/github-script@v4
+      with:
+        script: |
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: 'Deployment succeeded! ✅',
+          });
+    - name: Message failure
+      if: ${{ failure() }}
+      uses: actions/github-script@v4
+      with:
+        script: |
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: 'Deployment failed! ❌',
+          });
 
 # name: Like pizza
 
