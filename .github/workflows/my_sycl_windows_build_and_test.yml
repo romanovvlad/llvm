@@ -21,104 +21,109 @@ jobs:
       - name: Print stuff
         run: | 
           echo "Hello dudes!" 
-          core.info(`Ref is ${ steps.comment-branch.outputs.head_ref }`)
-  pr-commented:
-    name: PR commented
-    if: github.event.issue.pull_request
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v3
-        id: get-pr
-        with:
-          script: |
-            const request = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            }
-            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
-            try {
-              const result = await github.pulls.get(request)
-              return result.data
-            } catch (err) {
-              core.setFailed(`Request failed with error ${err}`)
-            }
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
-  deploy3:
-    runs-on: ubuntu-latest
-    steps:
-      # Checkout source code
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Checkout Pull Request
-        run: |
-          hub pr checkout ${{ github.event.issue.number }}
-          core.info(`Ref is ${{ github.event.issue.number }}`)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Hello dudes! ${steps.comment-branch.outputs.head_ref}" 
 
-  deploy:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/deploy' }}
-    steps:
-    - name: Get PR SHA
-      id: sha
-      uses: actions/github-script@v4
-      with:
-        result-encoding: string
-        script: |
-          const { owner, repo, number } = context.issue;
-          const pr = await github.pulls.get({
-            owner,
-            repo,
-            pull_number: number,
-          });
-          return pr.data.head.sha
-    - uses: actions/checkout@v2
-      with:
-        ref: ${{ steps.sha.outputs.result }}
-    - run: 
-          core.info(`Ref is ${{ steps.sha.outputs.result }}`)
-    - name: React to comment
-      uses: actions/github-script@v4
-      with:
-        script: |
-          const {owner, repo} = context.issue;
-          github.reactions.createForIssueComment({
-            owner,
-            repo,
-            comment_id: context.payload.comment.id,
-            content: "rocket",
-          });
-    - name: Fail randomly
-      run: |
-        cat README.md
-        exit $((RANDOM % 2))
-    - name: Message success
-      if: ${{ success() }}
-      uses: actions/github-script@v4
-      with:
-        script: |
-          github.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'Deployment succeeded! ✅',
-          });
-    - name: Message failure
-      if: ${{ failure() }}
-      uses: actions/github-script@v4
-      with:
-        script: |
-          github.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'Deployment failed! ❌',
-          });
+
+
+
+
+  # pr-commented:
+  #   name: PR commented
+  #   if: github.event.issue.pull_request
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/github-script@v3
+  #       id: get-pr
+  #       with:
+  #         script: |
+  #           const request = {
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             pull_number: context.issue.number
+  #           }
+  #           core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+  #           try {
+  #             const result = await github.pulls.get(request)
+  #             return result.data
+  #           } catch (err) {
+  #             core.setFailed(`Request failed with error ${err}`)
+  #           }
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+  #         ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
+  # deploy3:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # Checkout source code
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Checkout Pull Request
+  #       run: |
+  #         hub pr checkout ${{ github.event.issue.number }}
+  #         core.info(`Ref is ${{ github.event.issue.number }}`)
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ github.event.issue.pull_request && github.event.comment.body == '/deploy' }}
+  #   steps:
+  #   - name: Get PR SHA
+  #     id: sha
+  #     uses: actions/github-script@v4
+  #     with:
+  #       result-encoding: string
+  #       script: |
+  #         const { owner, repo, number } = context.issue;
+  #         const pr = await github.pulls.get({
+  #           owner,
+  #           repo,
+  #           pull_number: number,
+  #         });
+  #         return pr.data.head.sha
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       ref: ${{ steps.sha.outputs.result }}
+  #   - run: 
+  #         core.info(`Ref is ${{ steps.sha.outputs.result }}`)
+  #   - name: React to comment
+  #     uses: actions/github-script@v4
+  #     with:
+  #       script: |
+  #         const {owner, repo} = context.issue;
+  #         github.reactions.createForIssueComment({
+  #           owner,
+  #           repo,
+  #           comment_id: context.payload.comment.id,
+  #           content: "rocket",
+  #         });
+  #   - name: Fail randomly
+  #     run: |
+  #       cat README.md
+  #       exit $((RANDOM % 2))
+  #   - name: Message success
+  #     if: ${{ success() }}
+  #     uses: actions/github-script@v4
+  #     with:
+  #       script: |
+  #         github.issues.createComment({
+  #           issue_number: context.issue.number,
+  #           owner: context.repo.owner,
+  #           repo: context.repo.repo,
+  #           body: 'Deployment succeeded! ✅',
+  #         });
+  #   - name: Message failure
+  #     if: ${{ failure() }}
+  #     uses: actions/github-script@v4
+  #     with:
+  #       script: |
+  #         github.issues.createComment({
+  #           issue_number: context.issue.number,
+  #           owner: context.repo.owner,
+  #           repo: context.repo.repo,
+  #           body: 'Deployment failed! ❌',
+  #         });
 
 # name: Like pizza
 
