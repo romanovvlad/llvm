@@ -27,7 +27,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
-          ref: romanovvlad-patch-3 #f54ccf24765e8f08742667b377a1bd9c52cc6e19 ${{ steps.pr_data.outputs.branch }}
+          ref: romanovvlad-patch-4 #f54ccf24765e8f08742667b377a1bd9c52cc6e19 ${{ steps.pr_data.outputs.branch }}
 
 
 
