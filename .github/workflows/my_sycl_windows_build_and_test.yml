@@ -11,17 +11,46 @@ permissions:
 
 jobs:
   pr-commented222:
-    name: PR commented222
-    if: github.event.issue.pull_request
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: cfaf81fc0f3a80d17d396e35c3475932cfb2483f #${{ steps.comment-branch.outputs.head_ref }}
-      - name: Print stuff
-        run: | 
-          echo "Hello dudes!" 
-          echo "Hello dudes! ${{steps.comment-branch.outputs.head_ref}}" 
+    - name: Github API Request
+      id: request
+      uses: octokit/request-action@v2.0.0
+      with:
+        route: ${{ github.event.issue.pull_request.url }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout PR Branch
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
+        ref: ${{ steps.pr_data.outputs.branch }}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # name: PR commented222
+    # if: github.event.issue.pull_request
+    # runs-on: ubuntu-latest
+    # steps:
+    #   - uses: actions/checkout@v3
+    #     with:
+    #       ref: cfaf81fc0f3a80d17d396e35c3475932cfb2483f #${{ steps.comment-branch.outputs.head_ref }}
+    #   - name: Print stuff
+    #     run: | 
+    #       echo "Hello dudes!" 
+    #       echo "Hello dudes! ${{steps.comment-branch.outputs.head_ref}}" 
 
 
 
