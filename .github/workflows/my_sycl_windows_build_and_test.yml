@@ -6,34 +6,50 @@ on:
       - created
 
 jobs:
-  like-pizza:
+  lint:
     runs-on: ubuntu-latest
-    if: ${{ github.event.comment.body == 'I like pizza'}}
+    container:
+      image: ghcr.io/intel/llvm/sycl_ubuntu2004_nightly:no-drivers
     steps:
-      - name: Like pizza
-        uses: actions/github-script@v4
-        with:
-          script: |
-            const {owner, repo} = context.issue
-            github.reactions.createForIssueComment({
-              owner,
-              repo,
-              comment_id: context.payload.comment.id,
-              content: "+1",
-            });
-      - name: Github API Request
-        id: request
-        uses: octokit/request-action@v2.0.0
-        with:
-          route: ${{ github.event.issue.pull_request.url }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Checkout PR Branch
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
-          ref: ${{ steps.pr_data.outputs.branch }}
+    - name: 'PR commits + 1'
+      run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        persist-credentials: false
+        fetch-depth: ${{ env.PR_FETCH_DEPTH }}
+    - name: Run clang-format
+      uses: ./devops/actions/clang-format
+
+  # like-pizza:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ github.event.comment.body == 'I like pizza'}}
+  #   steps:
+  #     - name: Like pizza
+  #       uses: actions/github-script@v4
+  #       with:
+  #         script: |
+  #           const {owner, repo} = context.issue
+  #           github.reactions.createForIssueComment({
+  #             owner,
+  #             repo,
+  #             comment_id: context.payload.comment.id,
+  #             content: "+1",
+  #           });
+  #     - name: Github API Request
+  #       id: request
+  #       uses: octokit/request-action@v2.0.0
+  #       with:
+  #         route: ${{ github.event.issue.pull_request.url }}
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Checkout PR Branch
+  #       uses: actions/checkout@v2
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
+  #         ref: ${{ steps.pr_data.outputs.branch }}
+
   # build:
   #   name: Build + LIT
   #   runs-on: [Windows, build]
