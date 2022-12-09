@@ -1,7 +1,6 @@
 name: Checkout PR on comment
 
 on:
-  pull_request_target:
   issue_comment:
     # triggers on created, edited and deleted by default, you may wanna restrict it, e.g.:
     #types: [created]
