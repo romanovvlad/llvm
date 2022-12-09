@@ -21,7 +21,7 @@ jobs:
       - name: Print stuff
         run: | 
           echo "Hello dudes!" 
-          echo "Hello dudes! ${steps.comment-branch.outputs.head_ref}" 
+          echo "Hello dudes! ${{steps.comment-branch.outputs.head_ref}}" 
 
 
 
