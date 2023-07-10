@@ -11,3 +11,8 @@ module LLVM_Config_Config {
   header "llvm/Config/llvm-config.h"
   export *
 }
+
+module SYCL {
+  header "sycl/sycl.hpp"
+  export *
+}

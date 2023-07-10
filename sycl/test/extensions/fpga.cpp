@@ -5,6 +5,7 @@
 
 #include <type_traits>
 
+#if 1
 namespace intelfpga {
 template <unsigned ID> struct ethernet_pipe_id {
   static constexpr unsigned id = ID;
@@ -163,3 +164,4 @@ int main() {
 
   return 0;
 }
+#endif

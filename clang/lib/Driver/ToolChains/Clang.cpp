@@ -5235,6 +5235,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-fsycl-unique-prefix=") + UniqueID));
 
+    if (getenv("USE_MODULE")) {
+      SmallString<128> CachePath;
+      const bool HasPath = Driver::getDefaultModuleCachePath(CachePath);
+      if (HasPath) {
+        SmallString<128> BaseDir(C.getDriver().Dir);
+        llvm::sys::path::append(BaseDir, "..", "include");
+        llvm::sys::path::append(BaseDir, "module.modulemap");
+
+        CmdArgs.push_back("-fmodules"); // VLAD
+                                        //
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-fmodules-cache-path=") + CachePath));
+
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-fmodule-map-file=") + BaseDir));
+        CmdArgs.push_back("-fmodules-validate-system-headers");
+      }
+    }
+
     // Disable parallel for range-rounding for anything involving FPGA
     auto SYCLTCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
     bool HasFPGA = false;

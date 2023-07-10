@@ -79,6 +79,8 @@
 #pragma clang diagnostic ignored "-Wpsabi"
 #endif // !defined(__SYCL_DEVICE_ONLY__) && defined(__clang__)
 
+#include <sycl/sycl.hpp>
+
 #include <sycl/detail/type_traits.hpp>
 #include <sycl/ext/intel/esimd/alt_ui.hpp>
 #include <sycl/ext/intel/esimd/common.hpp>
