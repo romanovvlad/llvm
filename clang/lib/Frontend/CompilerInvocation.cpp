@@ -4742,6 +4742,7 @@ std::string CompilerInvocation::getModuleHash() const {
   for (const auto &Macro : getPreprocessorOpts().Macros) {
     // If we're supposed to ignore this macro for the purposes of modules,
     // don't put it into the hash.
+    /* fprintf(stderr, "VLAD MacroDef = %s\n", Macro.first.c_str()); */
     if (!hsOpts.ModulesIgnoreMacros.empty()) {
       // Check whether we're ignoring this macro.
       StringRef MacroDef = Macro.first;

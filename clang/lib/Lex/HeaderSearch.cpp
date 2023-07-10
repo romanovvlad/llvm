@@ -264,7 +264,8 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
 
     SmallString<128> HashStr;
     llvm::APInt(64, size_t(Hash)).toStringUnsigned(HashStr, /*Radix*/36);
-    llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
+    llvm::sys::path::append(Result, ModuleName + "-" + HashStr + "-" +
+                                        ContextModuleHash + ".pcm");
   }
   return Result.str().str();
 }

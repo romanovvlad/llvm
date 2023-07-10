@@ -8,6 +8,12 @@
 
 #pragma once
 
+#ifdef HAHA
+int foo() { return 33; }
+#endif
+
+#if 0
+
 #include <sycl/accessor.hpp>
 #include <sycl/aspects.hpp>
 #include <sycl/atomic.hpp>
@@ -86,3 +92,4 @@
 #include <sycl/ext/oneapi/sub_group.hpp>
 #include <sycl/ext/oneapi/sub_group_mask.hpp>
 #include <sycl/ext/oneapi/weak_object.hpp>
+#endif

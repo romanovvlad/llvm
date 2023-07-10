@@ -268,6 +268,8 @@ class HeaderSearch {
   /// The hash used for module cache paths.
   std::string ModuleHash;
 
+  std::string ContextModuleHash;
+
   /// The path to the module cache.
   std::string ModuleCachePath;
 
@@ -405,6 +407,8 @@ public:
 
   /// Set the hash to use for module cache paths.
   void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
+
+  void setContextModuleHash(StringRef Hash) { ContextModuleHash = std::string(Hash); }
 
   /// Set the path to the module cache.
   void setModuleCachePath(StringRef CachePath) {

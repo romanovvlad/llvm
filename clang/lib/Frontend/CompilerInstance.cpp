@@ -58,6 +58,7 @@
 #include <optional>
 #include <time.h>
 #include <utility>
+#include <sstream>
 
 using namespace clang;
 
@@ -497,6 +498,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
     std::string ModuleHash = getInvocation().getModuleHash();
+    /* printf("VLAD Hash Orig= %s\n", ModuleHash.c_str()); */
     PP->getHeaderSearchInfo().setModuleHash(ModuleHash);
     PP->getHeaderSearchInfo().setModuleCachePath(
         getSpecificModuleCachePath(ModuleHash));
@@ -1731,6 +1733,19 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*TheASTReader,
                                                    std::move(Listener));
+  getInvocation().getModuleHash();
+
+#if 0
+  if (auto FilteredMacros = llvm::make_filter_range(
+          this->getPreprocessor().macros(),
+          [](const auto &Macro) { return true || Macro.first->isFromAST(); });
+      !FilteredMacros.empty()) {
+    printf("   Macro Definitions:\n");
+    for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
+         FilteredMacros)
+      printf("%s\n", Macro.first->getName().str().c_str());
+  }
+#endif
 
   // Try to load the module file.
   switch (TheASTReader->ReadAST(
@@ -1780,6 +1795,7 @@ static ModuleSource selectModuleSource(
     ModuleFilename = BuiltModuleIt->second;
     return MS_ModuleBuildPragma;
   }
+  // VLAD
 
   // Try to load the module from the prebuilt module path.
   const HeaderSearchOptions &HSOpts = HS.getHeaderSearchOpts();
@@ -1801,6 +1817,138 @@ static ModuleSource selectModuleSource(
   return MS_ModuleNotFound;
 }
 
+static std::string getModuleHash(CompilerInvocation &CInvok,
+                                 CompilerInstance &CInst) {
+  // FIXME: Consider using SHA1 instead of MD5.
+  llvm::HashBuilder<llvm::MD5, llvm::support::endianness::native> HBuilder;
+
+  // Note: For QoI reasons, the things we use as a hash here should all be
+  // dumped via the -module-info flag.
+
+  // Start the signature with the compiler version.
+  HBuilder.add(getClangFullRepositoryVersion());
+
+  // Also include the serialization version, in case LLVM_APPEND_VC_REV is off
+  // and getClangFullRepositoryVersion() doesn't include git revision.
+  HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+
+  // Extend the signature with the language options
+#define LANGOPT(Name, Bits, Default, Description) HBuilder.add(CInvok.LangOpts->Name);
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
+  HBuilder.add(static_cast<unsigned>(CInvok.LangOpts->get##Name()));
+#define BENIGN_LANGOPT(Name, Bits, Default, Description)
+#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#include "clang/Basic/LangOptions.def"
+
+  HBuilder.addRange(CInvok.LangOpts->ModuleFeatures);
+
+  HBuilder.add(CInvok.LangOpts->ObjCRuntime);
+  HBuilder.addRange(CInvok.LangOpts->CommentOpts.BlockCommandNames);
+
+  // Extend the signature with the target options.
+  HBuilder.add(CInvok.TargetOpts->Triple, CInvok.TargetOpts->CPU, CInvok.TargetOpts->TuneCPU,
+               CInvok.TargetOpts->ABI);
+  HBuilder.addRange(CInvok.TargetOpts->FeaturesAsWritten);
+
+  // Extend the signature with preprocessor options.
+  const PreprocessorOptions &ppOpts = CInvok.getPreprocessorOpts();
+  HBuilder.add(ppOpts.UsePredefines, ppOpts.DetailedRecord);
+
+  const HeaderSearchOptions &hsOpts = CInvok.getHeaderSearchOpts();
+  for (const auto &Macro : CInvok.getPreprocessorOpts().Macros) {
+    // If we're supposed to ignore this macro for the purposes of modules,
+    // don't put it into the hash.
+    /* fprintf(stderr, "VLAD MacroDef = %s\n", Macro.first.c_str()); */
+    if (!hsOpts.ModulesIgnoreMacros.empty()) {
+      // Check whether we're ignoring this macro.
+      StringRef MacroDef = Macro.first;
+      if (hsOpts.ModulesIgnoreMacros.count(
+              llvm::CachedHashString(MacroDef.split('=').first)))
+        continue;
+    }
+
+    HBuilder.add(Macro);
+  }
+
+  for (IdentifierTable::iterator
+           Id = CInst.getPreprocessor().getIdentifierTable().begin(),
+           IdEnd = CInst.getPreprocessor().getIdentifierTable().end();
+       Id != IdEnd; ++Id) {
+
+    auto Name = Id->second->getName();
+
+    /* fprintf(stderr, "VLAD MacroDef = %s\n", Name.str().c_str()); */
+
+    if (Id->second->hadMacroDefinition()) {
+      /* fprintf(stderr, "hadMacroDefinition VLAD MacroDef = %s\n", Name.str().c_str()); */
+      MacroDefinition Macro =
+          CInst.getPreprocessor().getMacroDefinition(Id->second);
+
+      MacroInfo *MacroInfoVal = Macro.getMacroInfo();
+      /* MacroInfoVal->dump(); */
+      /* fprintf(stderr, "\n"); */
+
+      std::stringstream MacroDef;
+      SmallString<128> SpellingBuffer;
+      for (const auto &T : MacroInfoVal->tokens()) {
+        if (T.hasLeadingSpace())
+          MacroDef << ' ';
+
+        MacroDef << CInst.getPreprocessor().getSpelling(T, SpellingBuffer).str();
+      }
+      /* fprintf(stderr, "MacroDef = %s\n", MacroDef.str().c_str()); */
+
+      HBuilder.add(Name);
+      HBuilder.add(MacroDef.str());
+
+    }
+  }
+
+  // Extend the signature with the sysroot and other header search options.
+  HBuilder.add(hsOpts.Sysroot, hsOpts.ModuleFormat, hsOpts.UseDebugInfo,
+               hsOpts.UseBuiltinIncludes, hsOpts.UseStandardSystemIncludes,
+               hsOpts.UseStandardCXXIncludes, hsOpts.UseLibcxx,
+               hsOpts.ModulesValidateDiagnosticOptions);
+  HBuilder.add(hsOpts.ResourceDir);
+
+  if (hsOpts.ModulesStrictContextHash) {
+    HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
+    HBuilder.addRange(hsOpts.UserEntries);
+
+    const DiagnosticOptions &diagOpts = CInvok.getDiagnosticOpts();
+#define DIAGOPT(Name, Bits, Default) HBuilder.add(diagOpts.Name);
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
+  HBuilder.add(diagOpts.get##Name());
+#include "clang/Basic/DiagnosticOptions.def"
+#undef DIAGOPT
+#undef ENUM_DIAGOPT
+  }
+
+  // Extend the signature with the user build path.
+  HBuilder.add(hsOpts.ModuleUserBuildPath);
+
+  // Extend the signature with the module file extensions.
+  for (const auto &ext : CInvok.getFrontendOpts().ModuleFileExtensions)
+    ext->hashExtension(HBuilder);
+
+  // When compiling with -gmodules, also hash -fdebug-prefix-map as it
+  // affects the debug info in the PCM.
+  if (CInvok.getCodeGenOpts().DebugTypeExtRefs)
+    HBuilder.addRange(CInvok.getCodeGenOpts().DebugPrefixMap);
+
+  // Extend the signature with the enabled sanitizers, if at least one is
+  // enabled. Sanitizers which cannot affect AST generation aren't hashed.
+  SanitizerSet SanHash = CInvok.LangOpts->Sanitize;
+  SanHash.clear(getPPTransparentSanitizers());
+  if (!SanHash.empty())
+    HBuilder.add(SanHash.Mask);
+
+  llvm::MD5::MD5Result Result;
+  HBuilder.getHasher().final(Result);
+  uint64_t Hash = Result.high() ^ Result.low();
+  return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
+}
+
 ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     StringRef ModuleName, SourceLocation ImportLoc,
     SourceLocation ModuleNameLoc, bool IsInclusionDirective) {
@@ -1811,6 +1959,22 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
+  /* printf("VLAD Before loading\n"); */
+  /* std::string ModuleHash = getModuleHash(getInvocation(), *this); */
+
+  /* printf("VLAD Hash Context = %s\n", ModuleHash.c_str()); */
+
+  /* HS.setContextModuleHash(ModuleHash); */
+
+  /* std::string OldHash =  HS.getModuleHash().str(); */
+  /* std::string OldModuleCachePath = HS.getModuleCachePath().str(); */
+  /* HS.setModuleHash(ModuleHash); */
+
+  /* SmallString<256> ParentPath = */
+  /*     llvm::sys::path::parent_path(OldModuleCachePath); */
+  /* llvm::sys::path::append(ParentPath, ModuleHash); */
+  /* HS.setModuleCachePath(ParentPath); */
+
   ModuleSource Source =
       selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
   if (Source == MS_ModuleNotFound) {
@@ -1955,6 +2119,10 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
       getPreprocessorOpts().FailedModules->addFailed(ModuleName);
     return nullptr;
   }
+
+  //RESOTRE
+  /* HS.setModuleHash(OldHash); */
+  /* HS.setModuleCachePath(OldModuleCachePath); */
 
   // Okay, we've rebuilt and now loaded the module.
   return M;
